@@ -1,0 +1,9 @@
+{
+  "name": "1993 經建二版地形圖",
+  "category": "古地圖",
+  "tiles": [
+    "https://gis.sinica.edu.tw/tileserver/file-exists.php?img=TM25K_1993-jpg-{z}-{x}-{y}"
+  ],
+  "attribution": "© 中央研究院人社中心 GIS 專題中心",
+  "maxzoom": 18
+}

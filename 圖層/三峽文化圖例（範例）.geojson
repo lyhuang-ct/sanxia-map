@@ -1,0 +1,61 @@
+{
+  "type": "FeatureCollection",
+  "name": "三峽文化圖例（範例）",
+  "color": "#24406b",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.3688,
+          24.9346
+        ]
+      },
+      "properties": {
+        "id": "sample-01",
+        "photos": [],
+        "video": "",
+        "name": "三峽清水祖師廟",
+        "icon": "⛩️",
+        "description": "供奉清水祖師的地方信仰中心。戰後由畫家李梅樹主持重建數十年，以精緻的木雕、石雕與銅雕聞名，被譽為「東方藝術殿堂」。\n（範例資料：座標與內容請自行校正、補充）"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.3697,
+          24.9336
+        ]
+      },
+      "properties": {
+        "id": "sample-02",
+        "photos": [],
+        "video": "",
+        "name": "三峽老街（民權街）",
+        "icon": "🏘️",
+        "description": "保存日治時期紅磚拱廊街屋與巴洛克式立面，昔日為樟腦、茶葉與藍染布的集散地。\n（範例資料）"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.3702,
+          24.9353
+        ]
+      },
+      "properties": {
+        "id": "sample-03",
+        "photos": [],
+        "video": "",
+        "name": "三峽歷史文物館",
+        "icon": "🏛️",
+        "description": "原為日治時期的三峽庄役場，現作為展示三峽地方歷史與藝文的場館。\n（範例資料）"
+      }
+    }
+  ]
+}

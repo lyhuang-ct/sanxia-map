@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>新北三峽大埔文化生活地圖</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+:root{
+  --paper:#f6f1e7; --paper2:#efe7d6; --ink:#2b2620; --muted:#7a6f60; --line:#ddd2bd;
+  --indigo:#24406b; --indigo2:#3a5d92; --seal:#b03a2e; --ok:#4f7a3a;
+  --serif:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:var(--sans);color:var(--ink);background:var(--paper)}
+button{font:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+
+/* ---------- 頂部列 ---------- */
+.topbar{height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;
+  background:var(--indigo);color:#f4efe4;border-bottom:3px solid #17294a;position:relative;z-index:5}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.seal{flex:none;width:40px;height:40px;display:grid;place-items:center;background:var(--seal);color:#fff;
+  font-family:var(--serif);font-size:22px;font-weight:700;border-radius:4px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.35)}
+.brand h1{margin:0;font-family:var(--serif);font-size:20px;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand p{margin:2px 0 0;font-size:12px;opacity:.75;letter-spacing:.05em}
+.tools{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.tool{background:rgba(255,255,255,.1);color:#f4efe4;border:1px solid rgba(255,255,255,.25);padding:7px 12px;border-radius:6px;font-size:14px;white-space:nowrap}
+.tool:hover{background:rgba(255,255,255,.2)}
+.tool.on{background:#f4efe4;color:var(--indigo);border-color:#f4efe4;font-weight:600}
+#btnSide{display:none}
+
+/* ---------- 版面 ---------- */
+main{display:flex;height:calc(100% - 64px)}
+#sidebar{width:340px;flex:none;overflow-y:auto;background:var(--paper);border-right:1px solid var(--line);padding:6px 14px 30px}
+#mapwrap{flex:1;position:relative;min-width:0}
+#map{position:absolute;inset:0}
+
+section{padding:12px 0 14px;border-bottom:1px dashed var(--line)}
+section:last-child{border-bottom:0}
+section h2{margin:0 0 10px;font-family:var(--serif);font-size:16px;letter-spacing:.06em;display:flex;align-items:center;gap:8px}
+section h2::before{content:"";width:4px;height:16px;background:var(--seal);border-radius:2px}
+.group-label{font-size:12px;color:var(--muted);margin:8px 0 4px;letter-spacing:.05em}
+.opt{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:14px}
+.opt:hover{background:var(--paper2)}
+.opt input{accent-color:var(--indigo);margin:0}
+.opt small{color:var(--muted);font-size:11px;margin-left:auto}
+.sub{padding:4px 8px 4px 30px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.sub input[type=range]{flex:1;accent-color:var(--indigo)}
+.sub select{flex:1;padding:4px;border:1px solid var(--line);border-radius:5px;background:#fff}
+.note{font-size:12px;color:var(--muted);line-height:1.6;margin:6px 0 0}
+.note code{background:var(--paper2);padding:1px 4px;border-radius:3px;font-size:11px}
+
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:6px 10px;border-radius:6px;font-size:13px}
+.btn:hover{border-color:var(--indigo2);color:var(--indigo)}
+.btn.primary{background:var(--indigo);color:#fff;border-color:var(--indigo)}
+.btn.primary:hover{background:var(--indigo2);color:#fff}
+.btn.danger{color:var(--seal)}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+
+.status{font-size:13px;padding:8px 10px;border-radius:6px;background:var(--paper2);line-height:1.5}
+.status b{color:var(--indigo)}
+.status.folder{background:#e6efe0;border-left:3px solid var(--ok)}
+.status.browser{border-left:3px solid #c08a1e}
+
+/* 圖層列 */
+.layer-row{display:flex;align-items:center;gap:6px;padding:6px;border-radius:6px;border:1px solid transparent;margin-bottom:3px}
+.layer-row:hover{background:var(--paper2)}
+.layer-row.active{border-color:var(--indigo2);background:#e9edf4}
+.layer-row input[type=color]{width:22px;height:22px;border:0;padding:0;background:none;cursor:pointer}
+.layer-row .lname{flex:1;min-width:0;font-size:14px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.layer-row .lname small{display:block;font-size:11px;color:var(--muted)}
+.layer-row .badge{font-size:11px;background:var(--indigo);color:#fff;padding:1px 6px;border-radius:9px}
+.layer-row .count{font-size:12px;color:var(--muted)}
+.icon-btn{border:0;background:none;padding:2px 4px;border-radius:4px;color:var(--muted)}
+.icon-btn:hover{background:#fff;color:var(--seal)}
+.newlayer{display:flex;gap:6px;margin-top:8px}
+.newlayer input{flex:1;min-width:0;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+
+/* 圖例清單 */
+#featSearch{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;margin-bottom:6px}
+.feat{display:flex;gap:8px;align-items:center;padding:6px;border-radius:6px;cursor:pointer;font-size:14px}
+.feat:hover{background:var(--paper2)}
+.feat .fi{width:26px;height:26px;display:grid;place-items:center;background:#fff;border:1px solid var(--line);border-radius:50%;flex:none}
+.feat small{display:block;color:var(--muted);font-size:11px}
+.empty{font-size:13px;color:var(--muted);padding:6px}
+
+/* 地圖疊加元件 */
+#hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 16px;border-radius:20px;font-size:14px;display:none;z-index:3;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+#coords{position:absolute;left:10px;bottom:10px;background:rgba(246,241,231,.92);border:1px solid var(--line);padding:4px 8px;border-radius:5px;font-size:12px;font-variant-numeric:tabular-nums;z-index:2}
+.maplibregl-ctrl-attrib{font-size:11px}
+
+/* 圖例標記 */
+.pin{width:34px;height:34px;cursor:pointer;position:relative}
+.pin::before{content:"";position:absolute;inset:0;background:var(--c,#24406b);border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+  box-shadow:0 2px 6px rgba(0,0,0,.35);border:2px solid #fff}
+.pin span{position:absolute;inset:0;display:grid;place-items:center;font-size:16px;line-height:1;transform:translateY(-1px)}
+.pin:hover{filter:brightness(1.1);z-index:2}
+.pin.draggable::before{border-style:dashed}
+
+/* 彈出視窗 */
+.maplibregl-popup-content{padding:0;border-radius:10px;overflow:hidden;font-family:var(--sans)}
+.pop{width:300px;max-width:100%}
+.pop-h{display:flex;gap:10px;align-items:center;padding:12px 14px;background:var(--paper);border-bottom:1px solid var(--line)}
+.pop-i{font-size:22px}
+.pop-h h3{margin:0;font-family:var(--serif);font-size:17px}
+.pop-h small{color:var(--muted);font-size:11px}
+.pop-media{display:flex;gap:6px;overflow-x:auto;padding:0 14px}
+.pop-media:not(:empty){padding-top:10px}
+.pop-media img{height:110px;border-radius:6px;cursor:zoom-in;flex:none;object-fit:cover}
+.pop-video{padding:8px 14px 0}
+.pop-video video,.pop-video iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:6px;background:#000}
+.pop-d{margin:0;padding:10px 14px;font-size:14px;line-height:1.7;max-height:180px;overflow-y:auto;white-space:pre-wrap}
+.pop-a{display:flex;gap:6px;padding:0 14px 12px}
+.pop-a button{flex:1;padding:6px;border:1px solid var(--line);background:#fff;border-radius:6px;font-size:13px}
+.pop-a button:hover{border-color:var(--indigo2);color:var(--indigo)}
+.pop-a .danger:hover{border-color:var(--seal);color:var(--seal)}
+
+/* 編輯對話框 */
+dialog{border:0;border-radius:12px;padding:0;width:min(560px,94vw);background:var(--paper);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(30,25,18,.45)}
+#edForm{padding:20px 22px}
+#edForm h2{margin:0 0 14px;font-family:var(--serif);font-size:20px}
+#edForm label,.field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);margin-bottom:12px}
+#edForm input:not([type=file]),#edForm select,#edForm textarea{padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:14px;color:var(--ink)}
+#edForm textarea{resize:vertical;line-height:1.6}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+.row .grow{flex:3}
+.thumbs{display:flex;flex-wrap:wrap;gap:6px}
+.thumb{position:relative;width:72px;height:72px;border-radius:6px;overflow:hidden;background:#ddd}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb button{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:1;padding:0}
+.thumb.new::after{content:"新";position:absolute;left:2px;bottom:2px;background:var(--ok);color:#fff;font-size:10px;padding:0 4px;border-radius:3px}
+#edVideoCur{font-size:13px;color:var(--ink)}
+#edVideoCur button{margin-left:6px}
+.coordnote{font-size:12px;color:var(--muted);margin:-6px 0 10px}
+dialog menu{display:flex;justify-content:flex-end;gap:8px;margin:6px 0 0;padding:0}
+dialog menu .btn{padding:8px 18px;font-size:14px}
+
+/* 燈箱與提示 */
+#lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;place-items:center;z-index:50;cursor:zoom-out}
+#lightbox img{max-width:92vw;max-height:90vh;border-radius:6px}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;opacity:0;transition:.25s;z-index:60;pointer-events:none;max-width:90vw}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:820px){
+  #btnSide{display:inline-block}
+  .brand p{display:none}
+  .brand h1{font-size:16px}
+  #sidebar{position:absolute;top:64px;bottom:0;left:0;z-index:4;transform:translateX(-100%);transition:.25s;box-shadow:4px 0 20px rgba(0,0,0,.2)}
+  #sidebar.open{transform:none}
+  .tool .t{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="seal">峽</span>
+    <div><h1>新北三峽大埔文化生活地圖</h1><p>地圖編輯器 · 範圍限新北市三峽區</p></div>
+  </div>
+  <div class="tools">
+    <button id="btnSide" class="tool">☰</button>
+    <button id="btnAdd" class="tool" title="在地圖上點選位置新增圖例">📍<span class="t"> 新增圖例</span></button>
+    <button id="btnMove" class="tool" title="開啟後可拖曳圖例調整位置">✋<span class="t"> 移動圖例</span></button>
+    <button id="btnSV" class="tool" title="點選地圖位置開啟 Google 街景">🧍<span class="t"> 街景</span></button>
+    <button id="btnHome" class="tool" title="回到三峽">⌂<span class="t"> 回到三峽</span></button>
+  </div>
+</header>
+
+<main>
+  <aside id="sidebar">
+    <section>
+      <h2>專案資料夾</h2>
+      <div id="folderStatus" class="status browser"></div>
+      <div id="folderBtns" class="btns"></div>
+      <p class="note">連結本專案資料夾後，地圖會讀寫其中的 <code>圖層/</code> 資料夾：放進去的 <code>.geojson</code> 檔即成為圖例圖層、<code>.tile.json</code> 檔即成為底圖或古地圖圖層。（需使用 Chrome 或 Edge）</p>
+    </section>
+
+    <section>
+      <h2>底圖</h2>
+      <div id="baseList"></div>
+    </section>
+
+    <section>
+      <h2>古地圖</h2>
+      <label class="opt"><input type="checkbox" id="oldOn"> 疊加古地圖 <small>中研院 GIS 中心</small></label>
+      <div class="sub"><select id="oldSel"></select></div>
+      <div class="sub">透明度 <input type="range" id="oldOpacity" min="0" max="1" step="0.05" value="0.85"><span id="oldOpVal">85%</span></div>
+    </section>
+
+    <section>
+      <h2>3D 圖層</h2>
+      <label class="opt"><input type="checkbox" id="terrainOn"> 3D 地形 <small>含山影</small></label>
+      <div class="sub">高度誇張 <input type="range" id="terrainExag" min="1" max="3" step="0.1" value="1.5"><span id="exagVal">1.5×</span></div>
+      <label class="opt"><input type="checkbox" id="bldOn"> 3D 街景（立體建物）</label>
+      <div class="sub">提示：按住右鍵或 Ctrl＋拖曳可旋轉、傾斜視角；上方「🧍 街景」可開啟實景街景照片。</div>
+    </section>
+
+    <section>
+      <h2>圖例圖層</h2>
+      <div id="layerList"></div>
+      <form class="newlayer" id="newLayerForm">
+        <input id="newLayerName" placeholder="新圖層名稱，例：大埔老屋" maxlength="40">
+        <button class="btn primary">＋ 新增</button>
+      </form>
+      <div class="btns">
+        <button class="btn" id="btnImport">匯入 GeoJSON</button>
+        <button class="btn" id="btnExport">匯出編輯中圖層</button>
+        <input type="file" id="importIn" accept=".geojson,.json,application/geo+json" hidden>
+      </div>
+    </section>
+
+    <section>
+      <h2>圖例清單</h2>
+      <input id="featSearch" placeholder="搜尋名稱或描述…">
+      <div id="featList"></div>
+    </section>
+  </aside>
+
+  <div id="mapwrap">
+    <div id="map"></div>
+    <div id="hint"></div>
+    <div id="coords">移動滑鼠以顯示座標</div>
+  </div>
+</main>
+
+<dialog id="editor">
+  <form id="edForm">
+    <h2 id="edTitle">新增圖例</h2>
+    <label>所屬圖層<select id="edLayer"></select></label>
+    <div class="row">
+      <label class="grow">名稱 *<input id="edName" required maxlength="80" placeholder="例：三峽清水祖師廟"></label>
+      <label>圖示<select id="edIcon"></select></label>
+    </div>
+    <label>文字描述<textarea id="edDesc" rows="4" placeholder="歷史沿革、故事、開放時間、交通方式…"></textarea></label>
+    <div class="field">照片<div id="edPhotos" class="thumbs"></div><input type="file" id="edPhotoIn" accept="image/*" multiple></div>
+    <div class="field">影片
+      <div id="edVideoCur"></div>
+      <input type="file" id="edVideoIn" accept="video/*">
+      <input id="edVideoUrl" placeholder="或貼上 YouTube／影片網址">
+    </div>
+    <div class="row" id="edCoordRow">
+      <label>經度<input id="edLng" type="number" step="0.000001"></label>
+      <label>緯度<input id="edLat" type="number" step="0.000001"></label>
+    </div>
+    <p class="coordnote" id="edCoordNote">位置須在新北市三峽區範圍內。</p>
+    <menu>
+      <button type="button" class="btn" id="edCancel">取消</button>
+      <button type="submit" class="btn primary" id="edSave">儲存</button>
+    </menu>
+  </form>
+</dialog>
+
+<div id="lightbox"><img alt=""></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* =========================================================
+   基本設定
+   ========================================================= */
+// 新北市三峽區的範圍（經緯度外框）。地圖無法平移出此範圍，圖例也只能新增在此範圍內。
+const DISTRICT_BOUNDS = [[121.285, 24.715], [121.515, 24.975]];
+const VIEW_BOUNDS     = [[121.24, 24.69], [121.56, 25.00]];   // 視窗可移動範圍（略大一點，避免邊緣卡住）
+const HOME = { center: [121.3689, 24.9340], zoom: 15, pitch: 0, bearing: 0 };
+
+const SINICA = (id, fmt) => `https://gis.sinica.edu.tw/tileserver/file-exists.php?img=${id}-${fmt}-{z}-{x}-{y}`;
+const NLSC   = id => `https://wmts.nlsc.gov.tw/wmts/${id}/default/GoogleMapsCompatible/{z}/{y}/{x}`;
+const ATTR_SINICA = '古地圖 © 中央研究院人社中心 GIS 專題中心';
+const ATTR_NLSC   = '© 內政部國土測繪中心';
+const TERRARIUM   = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+
+// 底圖（同時只顯示一種）
+const BASES = [
+  { id:'voyager', group:'一般街道地圖', name:'一般街道地圖', tiles:['https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png','https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'], attribution:'© OpenStreetMap 貢獻者 © CARTO', maxzoom:19 },
+  { id:'osm',     group:'一般街道地圖', name:'OpenStreetMap 標準', tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], attribution:'© OpenStreetMap 貢獻者', maxzoom:19 },
+  { id:'emap',    group:'一般街道地圖', name:'臺灣通用電子地圖', tiles:[NLSC('EMAP')], attribution:ATTR_NLSC, maxzoom:19 },
+  { id:'sat',     group:'衛星照片',     name:'衛星照片（Esri World Imagery）', tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], attribution:'衛星影像 © Esri, Maxar, Earthstar Geographics', maxzoom:19 },
+  { id:'photo2',  group:'航拍照片',     name:'正射航拍影像（國土測繪中心）', tiles:[NLSC('PHOTO2')], attribution:ATTR_NLSC+' 正射影像', maxzoom:20 },
+  { id:'am1944b', group:'航拍照片',     name:'1944 美軍舊航照', note:'部分區域', tiles:[SINICA('AM25K_1944B','png')], attribution:ATTR_SINICA, maxzoom:18 },
+];
+
+// 古地圖（疊加在底圖上，可調透明度）
+const OLDMAPS = [
+  { id:'jm20k1904', name:'1904 日治臺灣堡圖（明治版）1:20,000', tiles:[SINICA('JM20K_1904','jpg')] },
+  { id:'jm20k1921', name:'1921 日治臺灣堡圖（大正版）1:20,000', tiles:[SINICA('JM20K_1921','jpg')] },
+  { id:'jm25k1921', name:'1921 日治二萬五千分一地形圖',           tiles:[SINICA('JM25K_1921','png')] },
+  { id:'jm50k1924', name:'1924 日治五萬分一地形圖',               tiles:[SINICA('JM50K_1924','jpg')] },
+  { id:'am50k1944', name:'1944 美軍地形圖 1:50,000',               tiles:[SINICA('AM50K_1944','png')] },
+  { id:'tm50k1956', name:'1956 臺灣地形圖 1:50,000',               tiles:[SINICA('TM50K_1956','jpg')] },
+  { id:'tm25k1989', name:'1989 經建一版地形圖 1:25,000',           tiles:[SINICA('TM25K_1989','jpg')] },
+].map(o => ({ ...o, attribution:ATTR_SINICA, maxzoom:18 }));
+
+const ICONS = [
+  ['📍','一般地點'],['⛩️','廟宇信仰'],['🏛️','古蹟建築'],['🏘️','老街聚落'],['🧵','藍染工藝'],['🎨','藝術文化'],
+  ['🍵','茶與飲食'],['🍜','小吃美食'],['🌉','橋樑'],['🌿','自然生態'],['⛰️','山林步道'],['🏞️','河川水岸'],
+  ['🏫','學校'],['🎭','節慶活動'],['📷','攝影景點'],['🧓','人物故事'],['🏠','老屋'],['🛍️','商家店舖'],
+];
+const LAYER_COLORS = ['#24406b','#b5532f','#4f7a3a','#8a5a9e','#c08a1e','#2d7f7f','#a33b5c','#5c4a32'];
+
+/* =========================================================
+   小工具
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2)).slice(0, 13);
+const stamp = () => new Date().toISOString().replace(/[-:T]/g,'').slice(0,14);
+const inDistrict = ll => { const [[w,s],[e,n]] = DISTRICT_BOUNDS; const lng = ll.lng ?? ll[0], lat = ll.lat ?? ll[1]; return lng>=w && lng<=e && lat>=s && lat<=n; };
+const ytId = u => { const m = String(u).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/); return m && m[1]; };
+let toastTimer;
+function toast(msg, ms = 2800){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms); }
+
+// IndexedDB 簡易鍵值儲存（瀏覽器暫存模式、記住資料夾）
+const idb = {
+  _db: null,
+  open(){ return this._db ||= new Promise((res, rej) => { const r = indexedDB.open('sanxia-dapu-map', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async _do(mode, fn){ const db = await this.open(); return new Promise((res, rej) => { const st = db.transaction('kv', mode).objectStore('kv'); const q = fn(st); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+  get(k){ return this._do('readonly', s => s.get(k)); },
+  set(k, v){ return this._do('readwrite', s => s.put(v, k)); },
+  del(k){ return this._do('readwrite', s => s.delete(k)); },
+  keys(){ return this._do('readonly', s => s.getAllKeys()); },
+};
+
+// 統一讀取圖例屬性（也接受使用者手寫的中文欄位名稱）
+function norm(pr = {}){
+  const arr = v => !v ? [] : Array.isArray(v) ? v : String(v).split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
+  return {
+    name: pr.name ?? pr['名稱'] ?? '（未命名）',
+    description: pr.description ?? pr['描述'] ?? pr['說明'] ?? pr['文字描述'] ?? '',
+    photos: arr(pr.photos ?? pr['照片']),
+    video: pr.video ?? pr['影片'] ?? '',
+    icon: pr.icon ?? pr['圖示'] ?? '📍',
+  };
+}
+
+/* =========================================================
+   狀態
+   ========================================================= */
+const S = {
+  mode: 'browser',        // 'browser' 瀏覽器暫存 | 'folder' 專案資料夾
+  root: null, layersDir: null, pendingHandle: null,
+  layers: [],             // { id, file, handle, data, visible, markers, mapLayers, sourceId }
+  activeId: null,
+  base: 'voyager',
+  addMode: false, moveMode: false, svMode: false,
+  popup: null, ed: null,
+  mediaCache: new Map(),
+  renderSeq: 0,
+};
+const editableLayers = () => S.layers.filter(l => !l.readonly);
+const activeLayer = () => editableLayers().find(l => l.id === S.activeId) || editableLayers()[0];
+const SITE_DIR = '圖層/';   // 網站上的圖層資料夾（與 index.html 同層）
+
+// 沒有可編輯圖層時（例如只有網站唯讀圖層），自動在瀏覽器建立「我的圖例」
+async function ensureEditableLayer(){
+  if (activeLayer()) return activeLayer();
+  const L = { id:'layer:我的圖例', file:'我的圖例.geojson', data:{ type:'FeatureCollection', name:'我的圖例', color:LAYER_COLORS[1], features:[] } };
+  if (!(await saveLayer(L))) return null;
+  addLayerObj(L); S.activeId = L.id; refreshUI();
+  return L;
+}
+
+/* =========================================================
+   地圖
+   ========================================================= */
+function rasterSource(d){ return { type:'raster', tiles:d.tiles, tileSize:256, maxzoom:d.maxzoom || 19, attribution:d.attribution || '' }; }
+
+function buildStyle(){
+  const sources = {}, layers = [{ id:'bg', type:'background', paint:{ 'background-color':'#efe9dc' } }];
+  for (const b of BASES){ sources['base-'+b.id] = rasterSource(b); layers.push({ id:'base-'+b.id, type:'raster', source:'base-'+b.id, layout:{ visibility: b.id === S.base ? 'visible' : 'none' } }); }
+  const dem = { type:'raster-dem', tiles:[TERRARIUM], tileSize:256, maxzoom:15, encoding:'terrarium', attribution:'地形資料 © Mapzen／AWS Terrain Tiles' };
+  sources.dem = dem; sources.demhs = { ...dem };
+  layers.push({ id:'hillshade', type:'hillshade', source:'demhs', layout:{ visibility:'none' }, paint:{ 'hillshade-exaggeration':0.45, 'hillshade-shadow-color':'#3b3023' } });
+  layers.push({ id:'old-anchor', type:'background', layout:{ visibility:'none' }, paint:{ 'background-opacity':0 } });
+  for (const o of OLDMAPS){ sources['old-'+o.id] = rasterSource(o); layers.push({ id:'old-'+o.id, type:'raster', source:'old-'+o.id, layout:{ visibility:'none' }, paint:{ 'raster-opacity':0.85 } }); }
+  layers.push({ id:'overlay-anchor', type:'background', layout:{ visibility:'none' }, paint:{ 'background-opacity':0 } });
+  return { version:8, sources, layers };
+}
+
+const map = new maplibregl.Map({
+  container: 'map', style: buildStyle(),
+  center: HOME.center, zoom: HOME.zoom, minZoom: 11, maxZoom: 19, maxPitch: 80,
+  maxBounds: VIEW_BOUNDS, attributionControl: { compact: true },
+});
+map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+map.addControl(new maplibregl.FullscreenControl(), 'top-right');
+map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
+
+map.on('mousemove', e => {
+  const { lng, lat } = e.lngLat;
+  let t = `經度 ${lng.toFixed(5)}　緯度 ${lat.toFixed(5)}`;
+  if (map.getTerrain && map.getTerrain()){ const h = map.queryTerrainElevation?.(e.lngLat); if (h != null) t += `　海拔約 ${Math.round(h / (+$('#terrainExag').value))} 公尺`; }
+  if (!inDistrict(e.lngLat)) t += '　（三峽區外）';
+  $('#coords').textContent = t;
+});
+
+map.on('click', e => {
+  if (S.addMode){
+    if (!inDistrict(e.lngLat)) return toast('此位置不在新北市三峽區範圍內，請重新選擇。');
+    setMode('add', false);
+    openEditor(null, null, e.lngLat);
+  } else if (S.svMode){
+    openStreetView(e.lngLat);
+  }
+});
+
+/* ---------- 底圖 ---------- */
+function setBase(id){
+  S.base = id;
+  for (const b of BASES) if (map.getLayer('base-'+b.id)) map.setLayoutProperty('base-'+b.id, 'visibility', b.id === id ? 'visible' : 'none');
+}
+function renderBaseList(){
+  const groups = {};
+  for (const b of BASES) (groups[b.group] ||= []).push(b);
+  $('#baseList').innerHTML = Object.entries(groups).map(([g, list]) =>
+    `<div class="group-label">${esc(g)}</div>` + list.map(b =>
+      `<label class="opt"><input type="radio" name="base" value="${esc(b.id)}" ${b.id === S.base ? 'checked' : ''}> ${esc(b.name)}${b.note ? `<small>${esc(b.note)}</small>` : b.fromFolder ? '<small>圖層資料夾</small>' : ''}</label>`
+    ).join('')).join('');
+}
+$('#baseList').addEventListener('change', e => { if (e.target.name === 'base') setBase(e.target.value); });
+
+/* ---------- 古地圖 ---------- */
+function renderOldList(){
+  const cur = $('#oldSel').value;
+  $('#oldSel').innerHTML = OLDMAPS.map(o => `<option value="${esc(o.id)}">${esc(o.name)}${o.fromFolder ? '（圖層資料夾）' : ''}</option>`).join('');
+  if (OLDMAPS.some(o => o.id === cur)) $('#oldSel').value = cur;
+}
+function applyOld(){
+  const on = $('#oldOn').checked, sel = $('#oldSel').value, op = +$('#oldOpacity').value;
+  $('#oldOpVal').textContent = Math.round(op * 100) + '%';
+  for (const o of OLDMAPS){
+    const id = 'old-'+o.id; if (!map.getLayer(id)) continue;
+    map.setLayoutProperty(id, 'visibility', on && o.id === sel ? 'visible' : 'none');
+    map.setPaintProperty(id, 'raster-opacity', op);
+  }
+}
+['#oldOn','#oldSel','#oldOpacity'].forEach(s => $(s).addEventListener('input', applyOld));
+$('#oldSel').addEventListener('change', () => { $('#oldOn').checked = true; applyOld(); });
+
+/* ---------- 3D 地形 ---------- */
+function applyTerrain(){
+  const on = $('#terrainOn').checked, ex = +$('#terrainExag').value;
+  $('#exagVal').textContent = ex.toFixed(1) + '×';
+  if (on){
+    map.setTerrain({ source:'dem', exaggeration: ex });
+    map.setLayoutProperty('hillshade', 'visibility', 'visible');
+  } else {
+    map.setTerrain(null);
+    map.setLayoutProperty('hillshade', 'visibility', 'none');
+  }
+}
+$('#terrainOn').addEventListener('change', () => {
+  applyTerrain();
+  if ($('#terrainOn').checked){ if (map.getPitch() < 40) map.easeTo({ pitch: 62, bearing: -15, zoom: Math.min(map.getZoom(), 14), duration: 1400 }); }
+  else if (!$('#bldOn').checked) map.easeTo({ pitch: 0, bearing: 0, duration: 900 });
+});
+$('#terrainExag').addEventListener('input', () => { if ($('#terrainOn').checked) applyTerrain(); else $('#exagVal').textContent = (+$('#terrainExag').value).toFixed(1) + '×'; });
+
+/* ---------- 3D 街景（立體建物） ---------- */
+function ensureBuildings(){
+  if (map.getLayer('bld3d')) return;
+  if (!map.getSource('ofm')) map.addSource('ofm', { type:'vector', url:'https://tiles.openfreemap.org/planet' });
+  map.addLayer({
+    id:'bld3d', type:'fill-extrusion', source:'ofm', 'source-layer':'building', minzoom:14,
+    paint:{
+      'fill-extrusion-color':['interpolate',['linear'],['coalesce',['get','render_height'],0], 0,'#e9dfcc', 20,'#cdb894', 60,'#9f8a6a'],
+      'fill-extrusion-height':['coalesce',['get','render_height'],6],
+      'fill-extrusion-base':['coalesce',['get','render_min_height'],0],
+      'fill-extrusion-opacity':0.88,
+    },
+  }, 'overlay-anchor');
+}
+$('#bldOn').addEventListener('change', () => {
+  const on = $('#bldOn').checked;
+  if (on){
+    ensureBuildings();
+    map.setLayoutProperty('bld3d', 'visibility', 'visible');
+    map.easeTo({ pitch: 65, bearing: -25, zoom: Math.max(map.getZoom(), 16.5), duration: 1400 });
+    toast('3D 街景已開啟：放大到街區即可看到立體建物。');
+  } else {
+    if (map.getLayer('bld3d')) map.setLayoutProperty('bld3d', 'visibility', 'none');
+    if (!$('#terrainOn').checked) map.easeTo({ pitch: 0, bearing: 0, duration: 900 });
+  }
+});
+
+/* ---------- 街景 ---------- */
+function openStreetView(ll){
+  const lat = (ll.lat ?? ll[1]).toFixed(6), lng = (ll.lng ?? ll[0]).toFixed(6);
+  window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`, '_blank', 'noopener');
+}
+
+/* ---------- 模式切換（新增／移動／街景） ---------- */
+function setMode(mode, on){
+  if (on){ S.addMode = S.svMode = false; if (mode !== 'move') { S.moveMode = false; refreshDraggable(); } }
+  if (mode === 'add') S.addMode = on;
+  if (mode === 'sv') S.svMode = on;
+  if (mode === 'move'){ S.moveMode = on; refreshDraggable(); }
+  $('#btnAdd').classList.toggle('on', S.addMode);
+  $('#btnSV').classList.toggle('on', S.svMode);
+  $('#btnMove').classList.toggle('on', S.moveMode);
+  map.getCanvas().style.cursor = (S.addMode || S.svMode) ? 'crosshair' : '';
+  const hint = S.addMode ? '請在地圖上點選要新增圖例的位置（Esc 取消）'
+             : S.svMode ? '點選地圖上的街道，即可開啟該處的街景照片（Esc 結束）'
+             : S.moveMode ? '拖曳圖例標記即可調整位置，放開後自動儲存' : '';
+  $('#hint').textContent = hint; $('#hint').style.display = hint ? 'block' : 'none';
+}
+$('#btnAdd').onclick  = async () => { if (!S.addMode && !(await ensureEditableLayer())) return; setMode('add', !S.addMode); };
+$('#btnSV').onclick   = () => setMode('sv', !S.svMode);
+$('#btnMove').onclick = () => setMode('move', !S.moveMode);
+$('#btnHome').onclick = () => map.flyTo({ ...HOME, pitch: map.getPitch() > 20 ? 55 : 0, duration: 1200 });
+$('#btnSide').onclick = () => $('#sidebar').classList.toggle('open');
+document.addEventListener('keydown', e => { if (e.key === 'Escape'){ setMode('add', false); setMode('sv', false); } });
+
+/* =========================================================
+   圖例圖層：繪製
+   ========================================================= */
+function clearLayerRender(L){
+  (L.markers || []).forEach(m => m.remove()); L.markers = [];
+  (L.mapLayers || []).forEach(id => map.getLayer(id) && map.removeLayer(id)); L.mapLayers = [];
+  if (L.sourceId && map.getSource(L.sourceId)) map.removeSource(L.sourceId); L.sourceId = null;
+}
+
+function renderLayer(L){
+  clearLayerRender(L);
+  const color = L.data.color || LAYER_COLORS[0];
+  const others = [];
+  for (const f of L.data.features){
+    if (!f || !f.geometry) continue;
+    f.properties ||= {}; f.properties.id ||= uid();
+    if (f.geometry.type === 'Point') L.markers.push(makeMarker(L, f));
+    else others.push(f);
+  }
+  if (others.length){
+    const sid = 'ov-' + (++S.renderSeq);
+    map.addSource(sid, { type:'geojson', data:{ type:'FeatureCollection', features: others } });
+    map.addLayer({ id:sid+'-fill', type:'fill', source:sid, filter:['==',['geometry-type'],'Polygon'], paint:{ 'fill-color':color, 'fill-opacity':0.18 } }, 'overlay-anchor');
+    map.addLayer({ id:sid+'-line', type:'line', source:sid, paint:{ 'line-color':color, 'line-width':3, 'line-opacity':0.9 } }, 'overlay-anchor');
+    L.sourceId = sid; L.mapLayers = [sid+'-fill', sid+'-line'];
+    for (const id of L.mapLayers){
+      map.on('click', id, e => {
+        if (S.addMode || S.svMode) return;
+        const fid = e.features[0]?.properties?.id;
+        const f = L.data.features.find(x => x.properties?.id === fid);
+        if (f) openPopup(L, f, e.lngLat);
+      });
+      map.on('mouseenter', id, () => { if (!S.addMode && !S.svMode) map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', id, () => { if (!S.addMode && !S.svMode) map.getCanvas().style.cursor = ''; });
+    }
+  }
+  applyLayerVisibility(L);
+}
+
+function makeMarker(L, f){
+  const p = norm(f.properties);
+  const el = document.createElement('div');
+  el.className = 'pin' + (S.moveMode ? ' draggable' : '');
+  el.style.setProperty('--c', L.data.color || LAYER_COLORS[0]);
+  el.innerHTML = `<span>${esc(p.icon)}</span>`;
+  el.title = p.name;
+  if (L.readonly) el.classList.remove('draggable');
+  const m = new maplibregl.Marker({ element: el, anchor: 'bottom', draggable: S.moveMode && !L.readonly })
+    .setLngLat(f.geometry.coordinates).addTo(map);
+  el.addEventListener('click', ev => { ev.stopPropagation(); if (S.addMode) return; if (S.svMode) return openStreetView(m.getLngLat()); openPopup(L, f); });
+  m.on('dragend', async () => {
+    const ll = m.getLngLat();
+    if (!inDistrict(ll)){ m.setLngLat(f.geometry.coordinates); return toast('超出三峽區範圍，已還原位置。'); }
+    f.geometry.coordinates = [+ll.lng.toFixed(6), +ll.lat.toFixed(6)];
+    f.properties.updated = new Date().toISOString();
+    if (await saveLayer(L)) toast(`已更新「${p.name}」的位置`);
+  });
+  return m;
+}
+
+function refreshDraggable(){
+  for (const L of S.layers) for (const m of L.markers || []){ const d = S.moveMode && !L.readonly; m.setDraggable(d); m.getElement().classList.toggle('draggable', d); }
+}
+function applyLayerVisibility(L){
+  for (const m of L.markers || []) m.getElement().style.display = L.visible ? '' : 'none';
+  for (const id of L.mapLayers || []) map.getLayer(id) && map.setLayoutProperty(id, 'visibility', L.visible ? 'visible' : 'none');
+}
+
+/* ---------- 彈出資訊窗 ---------- */
+async function fillMedia(el, p){
+  const strip = el.querySelector('.pop-media'), vbox = el.querySelector('.pop-video');
+  for (const ph of p.photos){
+    const url = await resolveMedia(ph); if (!url) continue;
+    const img = new Image(); img.src = url; img.alt = p.name; img.onclick = () => lightbox(url); strip.append(img);
+  }
+  if (p.video){
+    const y = ytId(p.video);
+    if (y){ vbox.innerHTML = `<iframe src="https://www.youtube.com/embed/${esc(y)}" allowfullscreen loading="lazy"></iframe>`; }
+    else { const url = await resolveMedia(p.video); if (url){ const v = document.createElement('video'); v.src = url; v.controls = true; v.preload = 'metadata'; vbox.append(v); } }
+  }
+}
+
+function openPopup(L, f, at){
+  const p = norm(f.properties);
+  const el = document.createElement('div'); el.className = 'pop';
+  el.innerHTML = `
+    <div class="pop-h"><span class="pop-i">${esc(p.icon)}</span><div><h3>${esc(p.name)}</h3><small>${esc(L.data.name)}</small></div></div>
+    <div class="pop-media"></div><div class="pop-video"></div>
+    ${p.description ? `<p class="pop-d">${esc(p.description)}</p>` : '<p class="pop-d" style="color:var(--muted)">（尚無文字描述）</p>'}
+    <div class="pop-a">${L.readonly ? '' : '<button data-a="edit">✎ 編輯</button>'}<button data-a="sv">🧍 街景</button>${L.readonly ? '' : '<button data-a="del" class="danger">🗑 刪除</button>'}</div>`;
+  fillMedia(el, p);
+  const isPt = f.geometry.type === 'Point';
+  const pos = at || (isPt ? f.geometry.coordinates : null); if (!pos) return;
+  if (!L.readonly){
+    el.querySelector('[data-a=edit]').onclick = () => { S.popup?.remove(); openEditor(L, f); };
+    el.querySelector('[data-a=del]').onclick = () => deleteFeature(L, f);
+  }
+  el.querySelector('[data-a=sv]').onclick = () => openStreetView(pos);
+  S.popup?.remove();
+  S.popup = new maplibregl.Popup({ maxWidth:'330px', offset: isPt && !at ? [0, -36] : 8 }).setLngLat(pos).setDOMContent(el).addTo(map);
+}
+
+function lightbox(url){ const lb = $('#lightbox'); lb.querySelector('img').src = url; lb.style.display = 'grid'; }
+$('#lightbox').onclick = () => $('#lightbox').style.display = 'none';
+
+/* =========================================================
+   媒體檔（照片、影片）
+   ========================================================= */
+async function resolveMedia(path){
+  if (!path) return null;
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  if (S.mediaCache.has(path)) return S.mediaCache.get(path);
+  // 網站模式：照片／影片路徑相對於網站上的「圖層/」資料夾
+  if (!path.startsWith('idb:') && S.mode !== 'folder') return new URL(SITE_DIR + path.replace(/^\.?\//, ''), location.href).href;
+  let blob = null;
+  try {
+    if (path.startsWith('idb:')) blob = await idb.get('media:' + path.slice(4));
+    else if (S.layersDir){
+      const parts = path.replace(/^\.?\//, '').split('/').filter(Boolean);
+      let dir = S.layersDir;
+      for (const seg of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(seg);
+      blob = await (await dir.getFileHandle(parts.at(-1))).getFile();
+    }
+  } catch (e) { console.warn('找不到媒體檔：', path, e); }
+  if (!blob) return null;
+  const url = URL.createObjectURL(blob); S.mediaCache.set(path, url); return url;
+}
+
+async function saveMedia(file){
+  const safe = file.name.replace(/[\\/:*?"<>|\s]+/g, '_');
+  let p;
+  if (S.mode === 'folder'){
+    const md = await S.layersDir.getDirectoryHandle('media', { create: true });
+    const fname = `${stamp()}_${uid().slice(0,4)}_${safe}`;
+    const fh = await md.getFileHandle(fname, { create: true });
+    const w = await fh.createWritable(); await w.write(file); await w.close();
+    p = 'media/' + fname;
+  } else {
+    const key = uid(); await idb.set('media:' + key, file); p = 'idb:' + key;
+  }
+  S.mediaCache.set(p, URL.createObjectURL(file));
+  return p;
+}
+
+/* =========================================================
+   圖層的讀取、儲存
+   ========================================================= */
+function clearAllLayers(){ S.popup?.remove(); S.layers.forEach(clearLayerRender); S.layers = []; S.mediaCache.forEach(u => u.startsWith('blob:') && URL.revokeObjectURL(u)); S.mediaCache.clear(); }
+
+function addLayerObj(L){
+  const d = L.data;
+  if (d.type === 'Feature') L.data = { type:'FeatureCollection', features:[d] };
+  L.data.features ||= [];
+  L.data.name ||= L.file.replace(/\.(geo)?json$/i, '');
+  L.data.color ||= LAYER_COLORS[S.layers.length % LAYER_COLORS.length];
+  L.visible = true; L.markers = []; L.mapLayers = [];
+  S.layers.push(L);
+  renderLayer(L);
+}
+
+async function saveLayer(L){
+  try {
+    const text = JSON.stringify(L.data, null, 2);
+    if (S.mode === 'folder'){
+      L.handle ||= await S.layersDir.getFileHandle(L.file, { create: true });
+      const w = await L.handle.createWritable(); await w.write(text); await w.close();
+    } else await idb.set(L.id, L.data);
+    return true;
+  } catch (e) { console.error(e); toast('儲存失敗：' + e.message, 5000); return false; }
+}
+
+function sampleData(){
+  const pt = (lng, lat, props) => ({ type:'Feature', geometry:{ type:'Point', coordinates:[lng, lat] }, properties:{ id: uid(), photos:[], video:'', ...props } });
+  return {
+    type:'FeatureCollection', name:'三峽文化圖例（範例）', color:'#24406b',
+    features:[
+      pt(121.3688, 24.9346, { name:'三峽清水祖師廟', icon:'⛩️', description:'供奉清水祖師的地方信仰中心。戰後由畫家李梅樹主持重建數十年，以精緻的木雕、石雕與銅雕聞名，被譽為「東方藝術殿堂」。\n（範例資料：座標與內容請自行校正、補充）' }),
+      pt(121.3697, 24.9336, { name:'三峽老街（民權街）', icon:'🏘️', description:'保存日治時期紅磚拱廊街屋與巴洛克式立面，昔日為樟腦、茶葉與藍染布的集散地。\n（範例資料）' }),
+      pt(121.3702, 24.9353, { name:'三峽歷史文物館', icon:'🏛️', description:'原為日治時期的三峽庄役場，現作為展示三峽地方歷史與藝文的場館。\n（範例資料）' }),
+    ],
+  };
+}
+
+/* ---------- 網站模式：讀取網站上的「圖層/」資料夾 ----------
+   靜態網站無法直接列出資料夾內容，因此依序嘗試：
+   1. 若在 GitHub Pages（*.github.io）：用 GitHub API 讀取儲存庫中「圖層」資料夾的檔案清單（永遠是最新的）
+   2. 讀取 圖層/index.json 清單檔（由 tools/update_layer_index.py 或 GitHub Actions 自動產生） */
+async function listSiteFiles(){
+  if (!/^https?:$/.test(location.protocol)) return null;
+  if (location.hostname.endsWith('.github.io')){
+    try {
+      const owner = location.hostname.split('.')[0];
+      const seg = location.pathname.split('/').filter(Boolean)[0];
+      const repo = seg && !seg.includes('.') ? seg : location.hostname;
+      const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent('圖層')}`);
+      if (r.ok){ const arr = await r.json(); if (Array.isArray(arr)) return arr.filter(x => x.type === 'file').map(x => x.name); }
+    } catch {}
+  }
+  try {
+    const r = await fetch(SITE_DIR + 'index.json', { cache:'no-cache' });
+    if (r.ok){ const j = await r.json(); return Array.isArray(j) ? j : (j.files || []); }
+  } catch {}
+  return null;
+}
+
+async function loadSiteLayers(){
+  const files = await listSiteFiles();
+  if (!files) return 0;
+  let n = 0;
+  const names = files.filter(f => !f.startsWith('.') && f.toLowerCase() !== 'index.json').sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+  for (const name of names){
+    const low = name.toLowerCase();
+    if (!low.endsWith('.json') && !low.endsWith('.geojson')) continue;
+    try {
+      const r = await fetch(new URL(SITE_DIR + name, location.href), { cache:'no-cache' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      if (low.endsWith('.tile.json')) addTileDef(data, name);
+      else if (data.type === 'FeatureCollection' || data.type === 'Feature'){ addLayerObj({ id:'site:' + name, file:name, data, readonly:true }); n++; }
+    } catch (e) { console.warn('網站圖層讀取失敗：', name, e); }
+  }
+  renderBaseList(); renderOldList(); applyOld();
+  return n;
+}
+
+async function loadBrowserLayers(){
+  S.mode = 'browser'; S.root = S.layersDir = null;
+  clearAllLayers(); removeFolderTiles();
+  S.siteCount = await loadSiteLayers();
+  let keys = [];
+  try { keys = (await idb.keys()).filter(k => typeof k === 'string' && k.startsWith('layer:')); } catch {}
+  if (!keys.length && !S.siteCount){ await idb.set('layer:三峽文化圖例', sampleData()).catch(() => {}); keys = ['layer:三峽文化圖例']; }
+  for (const k of keys.sort()){
+    let data = null; try { data = await idb.get(k); } catch {}
+    addLayerObj({ id:k, file:k.slice(6) + '.geojson', data: data || (k === 'layer:三峽文化圖例' ? sampleData() : { type:'FeatureCollection', features:[] }) });
+  }
+  S.activeId = activeLayer()?.id;
+  refreshUI();
+}
+
+async function useRoot(handle, announce = true){
+  // 使用者可選擇「專案資料夾」或直接選「圖層」資料夾
+  const layersDir = handle.name === '圖層' ? handle : await handle.getDirectoryHandle('圖層', { create: true });
+  S.root = handle; S.layersDir = layersDir; S.mode = 'folder'; S.pendingHandle = null; S.siteCount = 0;
+  await idb.set('dirHandle', handle);
+  await scanFolder();
+  if (announce) toast(`已連結資料夾「${handle.name}」，讀到 ${S.layers.length} 個圖例圖層`);
+}
+
+async function scanFolder(){
+  const keepActive = S.activeId;
+  clearAllLayers(); removeFolderTiles();
+  const entries = [];
+  for await (const [name, h] of S.layersDir.entries()) if (h.kind === 'file' && !name.startsWith('.')) entries.push([name, h]);
+  entries.sort((a, b) => a[0].localeCompare(b[0], 'zh-Hant'));
+  for (const [name, h] of entries){
+    const low = name.toLowerCase();
+    try {
+      if (low.endsWith('.tile.json')){
+        addTileDef(JSON.parse(await (await h.getFile()).text()), name);
+      } else if (low.endsWith('.geojson') || low.endsWith('.json')){
+        const data = JSON.parse(await (await h.getFile()).text());
+        if (data.type !== 'FeatureCollection' && data.type !== 'Feature') continue;
+        addLayerObj({ id:name, file:name, handle:h, data });
+      }
+    } catch (e) { console.error(e); toast(`圖層檔「${name}」格式有誤：${e.message}`, 5000); }
+  }
+  if (!S.layers.length){
+    const L = { id:'三峽文化圖例.geojson', file:'三峽文化圖例.geojson', data: sampleData() };
+    await saveLayer(L); addLayerObj(L);
+  }
+  S.activeId = S.layers.some(l => l.id === keepActive) ? keepActive : S.layers[0].id;
+  renderBaseList(); renderOldList(); applyOld(); setBase(BASES.some(b => b.id === S.base) ? S.base : 'voyager');
+  refreshUI();
+}
+
+/* ---------- 資料夾中的影像圖層（.tile.json） ---------- */
+function addTileDef(def, file){
+  if (!def || !Array.isArray(def.tiles) || !def.tiles.length) throw new Error('缺少 tiles 網址陣列');
+  const isOld = /古地圖|old|history/i.test(def.category || '');
+  const d = { id: 'f' + (++S.renderSeq), name: def.name || file.replace(/\.tile\.json$/i, ''), group: def.category || '其他影像', tiles: def.tiles,
+              attribution: def.attribution || '', maxzoom: def.maxzoom || 19, fromFolder: true };
+  const prefix = isOld ? 'old-' : 'base-';
+  map.addSource(prefix + d.id, rasterSource(d));
+  map.addLayer({ id: prefix + d.id, type:'raster', source: prefix + d.id, layout:{ visibility:'none' }, paint: isOld ? { 'raster-opacity':0.85 } : {} }, isOld ? 'overlay-anchor' : 'hillshade');
+  (isOld ? OLDMAPS : BASES).push(d);
+}
+function removeFolderTiles(){
+  for (const [arr, prefix] of [[BASES, 'base-'], [OLDMAPS, 'old-']]){
+    for (let i = arr.length - 1; i >= 0; i--) if (arr[i].fromFolder){
+      const id = prefix + arr[i].id;
+      if (map.getLayer(id)) map.removeLayer(id);
+      if (map.getSource(id)) map.removeSource(id);
+      arr.splice(i, 1);
+    }
+  }
+}
+
+/* ---------- 資料夾按鈕 ---------- */
+async function pickFolder(){
+  if (!window.showDirectoryPicker) return toast('此瀏覽器不支援直接讀寫資料夾，請改用電腦版 Chrome 或 Edge。目前資料會暫存在瀏覽器中。', 6000);
+  try { const h = await window.showDirectoryPicker({ id:'sanxia-dapu-map', mode:'readwrite' }); await useRoot(h); }
+  catch (e) { if (e.name !== 'AbortError') toast('無法開啟資料夾：' + e.message, 5000); }
+}
+async function reconnect(){
+  const h = S.pendingHandle; if (!h) return;
+  try { if ((await h.requestPermission({ mode:'readwrite' })) === 'granted') await useRoot(h); else toast('未取得資料夾權限'); }
+  catch (e) { toast('重新連結失敗，請改用「開啟專案資料夾」：' + e.message, 5000); }
+}
+
+function renderFolderPanel(){
+  const st = $('#folderStatus'), bt = $('#folderBtns');
+  if (S.mode === 'folder'){
+    st.className = 'status folder';
+    st.innerHTML = `已連結：<b>${esc(S.root.name)}</b>${S.root === S.layersDir ? '' : ' / 圖層'}<br><small>新增、修改圖例會直接存回資料夾</small>`;
+    bt.innerHTML = `<button class="btn primary" data-f="scan">🔄 重新掃描圖層</button><button class="btn" data-f="pick">📂 更換資料夾</button><button class="btn" data-f="browser">改用瀏覽器暫存</button>`;
+  } else {
+    st.className = 'status browser';
+    st.innerHTML = (S.siteCount ? `已從網站載入 <b>${S.siteCount}</b> 個圖例圖層（唯讀）<br>` : '') +
+      `目前為<b>瀏覽器暫存模式</b><br><small>你新增的圖例只存在這台電腦的瀏覽器中，可用「匯出」備份</small>`;
+    bt.innerHTML = `<button class="btn primary" data-f="pick">📂 開啟專案資料夾</button>` +
+      (S.pendingHandle ? `<button class="btn" data-f="re">🔗 重新連結「${esc(S.pendingHandle.name)}」</button>` : '');
+  }
+}
+$('#folderBtns').addEventListener('click', async e => {
+  const f = e.target.closest('[data-f]')?.dataset.f;
+  if (f === 'pick') pickFolder();
+  if (f === 're') reconnect();
+  if (f === 'scan'){ try { await scanFolder(); toast(`重新掃描完成：${S.layers.length} 個圖例圖層`); } catch (err) { toast('掃描失敗：' + err.message, 5000); } }
+  if (f === 'browser'){ await idb.del('dirHandle'); await loadBrowserLayers(); toast('已切換為瀏覽器暫存模式'); }
+});
+
+/* =========================================================
+   側欄：圖層清單、圖例清單
+   ========================================================= */
+function refreshUI(){ renderFolderPanel(); renderLayerList(); renderFeatList(); }
+
+function renderLayerList(){
+  $('#layerList').innerHTML = S.layers.map(L => `
+    <div class="layer-row ${L.id === S.activeId ? 'active' : ''}" data-id="${esc(L.id)}">
+      <input type="checkbox" data-act="vis" ${L.visible ? 'checked' : ''} title="顯示／隱藏">
+      <input type="color" data-act="color" value="${esc(L.data.color)}" title="圖層顏色" ${L.readonly ? 'disabled' : ''}>
+      <div class="lname" data-act="active" title="${L.readonly ? '網站圖層（唯讀）' : '設為編輯中圖層'}">${esc(L.data.name)}<small>${L.readonly ? '網站 · ' : ''}${esc(L.file)}</small></div>
+      ${L.readonly ? '<span class="badge" style="background:var(--muted)">唯讀</span>' : L.id === S.activeId ? '<span class="badge">編輯中</span>' : ''}
+      <span class="count">${L.data.features.length}</span>
+      <button class="icon-btn" data-act="zoom" title="縮放至此圖層">⤢</button>
+      ${L.readonly ? '' : '<button class="icon-btn" data-act="del" title="刪除圖層">🗑</button>'}
+    </div>`).join('') || '<div class="empty">尚無圖層</div>';
+}
+
+$('#layerList').addEventListener('click', async e => {
+  const row = e.target.closest('.layer-row'); if (!row) return;
+  const L = S.layers.find(l => l.id === row.dataset.id); const act = e.target.dataset.act;
+  if (act === 'active'){
+    if (L.readonly) return toast('網站上的圖層為唯讀；請在專案資料夾中編輯後重新上傳到 GitHub。', 4500);
+    S.activeId = L.id; renderLayerList(); renderFeatList();
+  }
+  if (act === 'zoom') zoomToLayer(L);
+  if (act === 'del') deleteLayer(L);
+});
+$('#layerList').addEventListener('change', async e => {
+  const row = e.target.closest('.layer-row'); if (!row) return;
+  const L = S.layers.find(l => l.id === row.dataset.id); const act = e.target.dataset.act;
+  if (act === 'vis'){ L.visible = e.target.checked; applyLayerVisibility(L); renderFeatList(); }
+  if (act === 'color'){ L.data.color = e.target.value; renderLayer(L); await saveLayer(L); }
+});
+
+function zoomToLayer(L){
+  const b = new maplibregl.LngLatBounds(); let n = 0;
+  const walk = c => typeof c[0] === 'number' ? (b.extend(c), n++) : c.forEach(walk);
+  L.data.features.forEach(f => f.geometry && walk(f.geometry.coordinates));
+  if (!n) return toast('此圖層還沒有圖例');
+  map.fitBounds(b, { padding: 80, maxZoom: 17, duration: 1000 });
+}
+
+$('#newLayerForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('#newLayerName').value.trim(); if (!name) return;
+  const safe = name.replace(/[\\/:*?"<>|]+/g, '_');
+  const file = safe + '.geojson', id = S.mode === 'folder' ? file : 'layer:' + safe;
+  if (S.layers.some(l => l.id === id)) return toast('已有同名圖層');
+  if (S.mode === 'folder'){ try { await S.layersDir.getFileHandle(file); return toast('圖層資料夾中已有同名檔案，請按「重新掃描圖層」'); } catch {} }
+  const L = { id, file, data:{ type:'FeatureCollection', name, color: LAYER_COLORS[S.layers.length % LAYER_COLORS.length], features:[] } };
+  if (!(await saveLayer(L))) return;
+  addLayerObj(L); S.activeId = id; $('#newLayerName').value = '';
+  refreshUI(); toast(`已新增圖層「${name}」` + (S.mode === 'folder' ? `（圖層/${file}）` : ''));
+});
+
+async function deleteLayer(L){
+  if (!confirm(`確定要刪除圖層「${L.data.name}」及其中 ${L.data.features.length} 個圖例嗎？\n此動作無法復原（照片、影片檔仍會保留在 media 資料夾）。`)) return;
+  try {
+    if (S.mode === 'folder') await S.layersDir.removeEntry(L.file); else await idb.del(L.id);
+  } catch (e) { return toast('刪除失敗：' + e.message, 5000); }
+  clearLayerRender(L); S.layers = S.layers.filter(l => l !== L);
+  if (S.activeId === L.id) S.activeId = S.layers[0]?.id;
+  refreshUI(); toast('圖層已刪除');
+}
+
+function renderFeatList(){
+  const q = $('#featSearch').value.trim().toLowerCase();
+  const items = [];
+  for (const L of S.layers){
+    if (!L.visible) continue;
+    for (const f of L.data.features){
+      const p = norm(f.properties);
+      if (q && !(p.name + ' ' + p.description).toLowerCase().includes(q)) continue;
+      items.push({ L, f, p });
+    }
+  }
+  const box = $('#featList');
+  box.innerHTML = items.length ? items.map((it, i) =>
+    `<div class="feat" data-i="${i}"><span class="fi" style="border-color:${esc(it.L.data.color)}">${esc(it.p.icon)}</span><div>${esc(it.p.name)}<small>${esc(it.L.data.name)}${it.p.photos.length ? ` · 📷${it.p.photos.length}` : ''}${it.p.video ? ' · 🎬' : ''}</small></div></div>`
+  ).join('') : `<div class="empty">${q ? '找不到符合的圖例' : '尚無圖例，按上方「📍 新增圖例」開始'}</div>`;
+  box._items = items;
+}
+$('#featSearch').addEventListener('input', renderFeatList);
+$('#featList').addEventListener('click', e => {
+  const el = e.target.closest('.feat'); if (!el) return;
+  const { L, f } = $('#featList')._items[+el.dataset.i];
+  const c = f.geometry.type === 'Point' ? f.geometry.coordinates : null;
+  if (c){ map.flyTo({ center: c, zoom: Math.max(map.getZoom(), 17), duration: 1000 }); map.once('moveend', () => openPopup(L, f)); }
+  else { zoomToLayer(L); }
+  if (innerWidth <= 820) $('#sidebar').classList.remove('open');
+});
+
+/* ---------- 匯入／匯出 ---------- */
+$('#btnImport').onclick = () => $('#importIn').click();
+$('#importIn').onchange = async e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (data.type !== 'FeatureCollection' && data.type !== 'Feature') throw new Error('不是 GeoJSON');
+    const base = file.name.replace(/\.(geo)?json$/i, '').replace(/[\\/:*?"<>|]+/g, '_');
+    let name = base, n = 2;
+    const idOf = nm => S.mode === 'folder' ? nm + '.geojson' : 'layer:' + nm;
+    while (S.layers.some(l => l.id === idOf(name))) name = `${base}_${n++}`;
+    const L = { id: idOf(name), file: name + '.geojson', data };
+    if (!(await saveLayer(L))) return;
+    addLayerObj(L); S.activeId = L.id; refreshUI(); zoomToLayer(L);
+    toast(`已匯入圖層「${L.data.name}」`);
+  } catch (err) { toast('匯入失敗：' + err.message, 5000); }
+};
+
+$('#btnExport').onclick = async () => {
+  const L = activeLayer(); if (!L) return;
+  const out = structuredClone(L.data);
+  if (S.mode === 'browser'){ // 將瀏覽器內的照片／影片嵌入，讓匯出檔可獨立使用
+    const toData = async p => { if (!p || !p.startsWith('idb:')) return p; const b = await idb.get('media:' + p.slice(4)); return b ? await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); }) : ''; };
+    for (const f of out.features){ const pr = f.properties || {}; if (pr.photos) pr.photos = await Promise.all(pr.photos.map(toData)); if (pr.video) pr.video = await toData(pr.video); }
+  }
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type:'application/geo+json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = L.file.replace(/\.json$/i, '.geojson'); a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+};
+
+/* =========================================================
+   圖例編輯器
+   ========================================================= */
+$('#edIcon').innerHTML = ICONS.map(([i, n]) => `<option value="${i}">${i} ${n}</option>`).join('');
+
+function openEditor(L, f, lngLat){
+  const isNew = !f;
+  const p = isNew ? { name:'', description:'', photos:[], video:'', icon:'📍' } : norm(f.properties);
+  L ||= activeLayer();
+  S.ed = { L, f, keptPhotos:[...p.photos], newPhotos:[], keptVideo: ytId(p.video) || /^https?:/i.test(p.video) ? '' : p.video, videoFile:null };
+  $('#edTitle').textContent = isNew ? '新增圖例' : '編輯圖例';
+  $('#edLayer').innerHTML = editableLayers().map(l => `<option value="${esc(l.id)}">${esc(l.data.name)}</option>`).join('');
+  $('#edLayer').value = L.id;
+  $('#edName').value = p.name; $('#edDesc').value = p.description;
+  if (!ICONS.some(([i]) => i === p.icon)) $('#edIcon').insertAdjacentHTML('beforeend', `<option value="${esc(p.icon)}">${esc(p.icon)}</option>`);
+  $('#edIcon').value = p.icon;
+  $('#edVideoUrl').value = /^https?:/i.test(p.video) ? p.video : '';
+  $('#edPhotoIn').value = ''; $('#edVideoIn').value = '';
+  const isPt = isNew || f.geometry.type === 'Point';
+  $('#edCoordRow').style.display = $('#edCoordNote').style.display = isPt ? '' : 'none';
+  if (isPt){
+    const c = isNew ? [lngLat.lng, lngLat.lat] : f.geometry.coordinates;
+    $('#edLng').value = (+c[0]).toFixed(6); $('#edLat').value = (+c[1]).toFixed(6);
+  }
+  renderEdMedia();
+  $('#editor').showModal();
+  setTimeout(() => $('#edName').focus(), 50);
+}
+
+async function renderEdMedia(){
+  const box = $('#edPhotos'); box.innerHTML = '';
+  for (const [i, path] of S.ed.keptPhotos.entries()){
+    const t = document.createElement('div'); t.className = 'thumb';
+    t.innerHTML = `<img alt=""><button type="button" title="移除">✕</button>`;
+    t.querySelector('button').onclick = () => { S.ed.keptPhotos.splice(i, 1); renderEdMedia(); };
+    box.append(t); resolveMedia(path).then(u => { if (u) t.querySelector('img').src = u; });
+  }
+  for (const [i, file] of S.ed.newPhotos.entries()){
+    const t = document.createElement('div'); t.className = 'thumb new';
+    t.innerHTML = `<img alt=""><button type="button" title="移除">✕</button>`;
+    t.querySelector('img').src = URL.createObjectURL(file);
+    t.querySelector('button').onclick = () => { S.ed.newPhotos.splice(i, 1); renderEdMedia(); };
+    box.append(t);
+  }
+  const vc = $('#edVideoCur');
+  const cur = S.ed.videoFile ? `新影片：${S.ed.videoFile.name}` : S.ed.keptVideo ? `目前影片：${S.ed.keptVideo.split('/').pop()}` : '';
+  vc.innerHTML = cur ? `${esc(cur)}<button type="button" class="btn danger">移除</button>` : '';
+  if (cur) vc.querySelector('button').onclick = () => { S.ed.videoFile = null; S.ed.keptVideo = ''; $('#edVideoIn').value = ''; renderEdMedia(); };
+}
+$('#edPhotoIn').onchange = e => { S.ed.newPhotos.push(...e.target.files); e.target.value = ''; renderEdMedia(); };
+$('#edVideoIn').onchange = e => { const f = e.target.files[0]; if (!f) return; if (f.size > 200 * 1024 * 1024) toast('影片超過 200 MB，建議改貼 YouTube 網址'); S.ed.videoFile = f; $('#edVideoUrl').value = ''; renderEdMedia(); };
+$('#edCancel').onclick = () => $('#editor').close();
+
+$('#edForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const ed = S.ed, target = S.layers.find(l => l.id === $('#edLayer').value);
+  const isPt = !ed.f || ed.f.geometry.type === 'Point';
+  let coords;
+  if (isPt){
+    coords = [+(+$('#edLng').value).toFixed(6), +(+$('#edLat').value).toFixed(6)];
+    if (!coords.every(Number.isFinite) || !inDistrict(coords)) return toast('座標不在新北市三峽區範圍內，請修正。');
+  }
+  const btn = $('#edSave'); btn.disabled = true; btn.textContent = '儲存中…';
+  try {
+    const photos = [...ed.keptPhotos];
+    for (const file of ed.newPhotos) photos.push(await saveMedia(file));
+    let video = $('#edVideoUrl').value.trim();
+    if (ed.videoFile) video = await saveMedia(ed.videoFile);
+    else if (!video) video = ed.keptVideo || '';
+    const old = ed.f?.properties || {};
+    // 移除中文別名欄位，統一以英文欄位儲存；其餘自訂欄位保留
+    const extra = Object.fromEntries(Object.entries(old).filter(([k]) => !['名稱','描述','說明','文字描述','照片','影片','圖示'].includes(k)));
+    const props = { ...extra, id: old.id || uid(), name: $('#edName').value.trim(), icon: $('#edIcon').value,
+                    description: $('#edDesc').value.trim(), photos, video, updated: new Date().toISOString() };
+    props.created ||= props.updated;
+    if (ed.f){
+      ed.f.properties = props;
+      if (isPt) ed.f.geometry.coordinates = coords;
+      if (target !== ed.L){
+        ed.L.data.features = ed.L.data.features.filter(x => x !== ed.f);
+        target.data.features.push(ed.f);
+        await saveLayer(ed.L); renderLayer(ed.L);
+      }
+    } else {
+      target.data.features.push({ type:'Feature', geometry:{ type:'Point', coordinates: coords }, properties: props });
+    }
+    if (await saveLayer(target)){
+      renderLayer(target); S.activeId = target.id; refreshUI();
+      $('#editor').close();
+      toast(`已儲存「${props.name}」`);
+      const f = target.data.features.find(x => x.properties.id === props.id);
+      if (f && isPt) openPopup(target, f);
+    }
+  } catch (err) { console.error(err); toast('儲存失敗：' + err.message, 5000); }
+  finally { btn.disabled = false; btn.textContent = '儲存'; }
+});
+
+async function deleteFeature(L, f){
+  const p = norm(f.properties);
+  if (!confirm(`確定要刪除圖例「${p.name}」嗎？`)) return;
+  L.data.features = L.data.features.filter(x => x !== f);
+  if (await saveLayer(L)){ S.popup?.remove(); renderLayer(L); refreshUI(); toast('圖例已刪除'); }
+}
+
+/* =========================================================
+   啟動
+   ========================================================= */
+renderBaseList(); renderOldList();
+map.on('load', async () => {
+  map.setSky?.({ 'sky-color':'#bcd3e6', 'horizon-color':'#efe7d6', 'sky-horizon-blend':0.6 });
+  let h = null;
+  try { h = await idb.get('dirHandle'); } catch {}
+  try {
+    if (h && (await h.queryPermission({ mode:'readwrite' })) === 'granted') return await useRoot(h, false);
+  } catch {}
+  if (h) S.pendingHandle = h;
+  await loadBrowserLayers();
+});
+map.on('error', e => { if (e?.error?.status !== 404) console.warn('地圖資源載入問題：', e?.error?.message || e); });
+</script>
+</body>
+</html>
